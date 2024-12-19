@@ -1,7 +1,6 @@
-import Blog from "../models/blog.models.js";
-import User from "../models/user.models.js";
-import cloudinary from "./../middleware/cloudinary.js";  // Cloudinary config
-import fs from "fs";  // File system module
+import mongoose from "mongoose";
+import Blog from "../models/blog.models.js";  // Import the blog model
+import cloudinary from "../middleware/cloudinary.js"
 
 // Function to upload image to Cloudinary and return the URL
 const uploadImageToCloudinary = async (localPath) => {
@@ -23,81 +22,98 @@ const uploadImageToCloudinary = async (localPath) => {
     }
 };
 
-// Create a new blog
-const createBlog = async (req, res) => {
+// Add new blog with image
+const addBlog = async (req, res) => {
     const { title, description } = req.body;
 
+    // Check if an image is uploaded
+    if (!req.file) {
+        return res.status(400).json({ error: "Blog should have an image" });
+    }
+
     try {
-        // Check if file is uploaded
-        if (req.file) {
-            // Upload image to Cloudinary
-            const imageUrl = await uploadImageToCloudinary(req.file.path);
+        // Upload image to Cloudinary
+        const imageUrl = await uploadImageToCloudinary(req.file.path);
 
-            if (!imageUrl) {
-                return res.status(500).json({ message: 'Error uploading image to Cloudinary' });
-            }
-
-            // Create a new blog post with Cloudinary image URL
-            const blog = new Blog({
-                title,
-                description,
-                image: imageUrl,  // Use Cloudinary URL instead of local file path
-                user: req.user._id,  // Assuming user is authenticated and user ID is in req.user
-            });
-
-            await blog.save();
-            res.status(201).json(blog);  // Return the created blog
-        } else {
-            res.status(400).json({ message: 'No image uploaded' });  // No image uploaded
+        if (!imageUrl) {
+            return res.status(500).json({ message: 'Error uploading image to Cloudinary' });
         }
-    } catch (err) {
-        console.error(err); // Log the error for debugging
-        res.status(500).json({ message: 'Error creating blog' });
+        // Create new blog post
+        const blog = await Blog.create({
+            title,
+            description,
+            image: imageUrl,
+        });
+
+        // Respond with the created blog post
+        res.status(200).json({
+            success: true,
+            message: "Blog added successfully",
+            blog,
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error adding blog" });
     }
 };
 
-// Get all blogs with user information populated
+// Get all blogs
 const getAllBlogs = async (req, res) => {
     try {
-        const blogs = await Blog.find().populate('user'); // Populate 'user' field
+        const blogs = await Blog.find({});
+        if (!blogs) {
+            return res.status(404).json({ success: false, message: "No blogs found" });
+        }
         res.json(blogs);
-    } catch (err) {
-        console.error(err); // Log the error for debugging
-        res.status(500).json({ message: 'Error fetching blogs' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error fetching blogs" });
     }
 };
 
-// Get blogs of the logged-in user
-const getUserBlogs = async (req, res) => {
-    const userId = req.user._id; // Get user ID from authenticated request
+// Get a single blog by ID
+const getBlogWithId = async (req, res) => {
+    const { id } = req.params;
+
+    // Validate the provided ID
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: "Not a valid blog ID" });
+    }
 
     try {
-        const blogs = await Blog.find({ user: userId }) // Find blogs by user ID
-            .populate('user'); // Populate user details along with the blog
-        res.json(blogs);
-    } catch (err) {
-        console.error(err); // Log the error for debugging
-        res.status(500).json({ message: 'Error fetching user blogs' });
+        const blog = await Blog.findById(id);
+        if (!blog) {
+            return res.status(404).json({ message: `No blog with ID: ${id}` });
+        }
+        res.status(200).json({ message: "Blog found", blog });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error fetching blog" });
     }
 };
 
-// Update a blog
+// Update a blog post
 const updateBlog = async (req, res) => {
-    const { blogId } = req.params;
+    const { id } = req.params;
     const { title, description } = req.body;
 
-    try {
-        const blog = await Blog.findById(blogId);
+    // Validate the blog ID
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: "Not a valid blog ID" });
+    }
 
+    try {
+        const blog = await Blog.findById(id);
         if (!blog) {
-            return res.status(404).json({ message: 'Blog not found' });
+            return res.status(404).json({ message: `No blog with ID: ${id}` });
         }
 
-        // Update blog properties
+        // Update the blog fields
         blog.title = title || blog.title;
         blog.description = description || blog.description;
 
-        // Update image if a new file is uploaded
+        // If a new image is uploaded, update the image URL
         if (req.file) {
             const imageUrl = await uploadImageToCloudinary(req.file.path);
             if (imageUrl) {
@@ -105,31 +121,34 @@ const updateBlog = async (req, res) => {
             }
         }
 
+        // Save the updated blog
         await blog.save();
-        res.json(blog);
-    } catch (err) {
-        console.error(err); // Log the error for debugging
-        res.status(500).json({ message: 'Error updating blog' });
+        res.status(200).json({ message: "Blog updated successfully", blog });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error updating blog" });
     }
 };
 
 // Delete a blog
 const deleteBlog = async (req, res) => {
-    const { blogId } = req.params;
+    const { id } = req.params;
+
+    // Validate the blog ID
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: "Not a valid blog ID" });
+    }
 
     try {
-        const blog = await Blog.findById(blogId);
-
+        const blog = await Blog.findByIdAndDelete(id);
         if (!blog) {
-            return res.status(404).json({ message: 'Blog not found' });
+            return res.status(404).json({ message: `No blog with ID: ${id}` });
         }
-
-        await blog.remove();
-        res.json({ message: 'Blog deleted successfully' });
-    } catch (err) {
-        console.error(err); // Log the error for debugging
-        res.status(500).json({ message: 'Error deleting blog' });
+        res.status(200).json({ message: "Blog deleted successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error deleting blog" });
     }
 };
 
-export { createBlog, getAllBlogs, getUserBlogs, updateBlog, deleteBlog };
+export { addBlog, getAllBlogs, getBlogWithId, updateBlog, deleteBlog };

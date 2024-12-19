@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema({
         required: true,
     },
     profileImage: {
-        type: String, // URL of the profile image stored in Cloudinary
+        type: String, 
     },
     description: {
         type: String,

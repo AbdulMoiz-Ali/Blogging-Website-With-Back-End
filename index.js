@@ -18,7 +18,7 @@ app.get("/", (req, res) => {
 });
 
 // Routes
-app.use("/post", blogRoutes);
+app.use("/blog", blogRoutes);
 app.use("/user", UserRoutes);
 
 // Database Connection and Server Start
