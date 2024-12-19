@@ -10,10 +10,10 @@ const blogSchema = new mongoose.Schema({
         required: true,
     },
     image: {
-        type: String, // URL of the image stored in Cloudinary
+        type: String, 
         required: true,
     },
-    user: {
+    user: {  // The correct field name is 'user', not 'userId'
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true,

@@ -41,7 +41,6 @@ const register = async (req, res) => {
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
-
         const user = await auth.findOne({ email });
         if (!user) {
             return res.status(400).json({ message: "Email or password is incorrect" });

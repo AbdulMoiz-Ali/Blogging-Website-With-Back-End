@@ -4,6 +4,7 @@ import express from "express";
 import cors from "cors";
 import connectDB from "./src/db/index.js";
 import blogRoutes from "./src/routes/blog.routes.js";
+import UserRoutes from "./src/routes/user.routes.js";
 
 const app = express();
 
@@ -17,7 +18,8 @@ app.get("/", (req, res) => {
 });
 
 // Routes
-app.use("/api/blog", blogRoutes);
+app.use("/post", blogRoutes);
+app.use("/user", UserRoutes);
 
 // Database Connection and Server Start
 connectDB()
