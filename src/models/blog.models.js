@@ -1,20 +1,23 @@
 import mongoose from "mongoose";
 
-const Schema = mongoose.Schema;
-
-const BlogSchema = new Schema(
-    {
-        title: { type: String, required: true },
-        content: { type: String, required: true },
-        author: { type: mongoose.Schema.Types.ObjectId, ref: "users", required: true },
-        tags: [String],
-        category: { type: String, required: true },
-        image: { type: String },
-        likes: { type: Number, default: 0 },
-        views: { type: Number, default: 0 },
-        isPublished: { type: Boolean, default: false },
+const blogSchema = new mongoose.Schema({
+    title: {
+        type: String,
+        required: true,
     },
-    { timestamps: true }
-);
+    description: {
+        type: String,
+        required: true,
+    },
+    image: {
+        type: String, // URL of the image stored in Cloudinary
+        required: true,
+    },
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+    },
+}, { timestamps: true });
 
-export default mongoose.model("Blog", BlogSchema);
+export default mongoose.model('Blog', blogSchema);
